@@ -1,5 +1,14 @@
 import socket
 import threading
+from enum import Enum
+
+lista_pokemons = Enum("Pokemons", {
+    "Pikachu": {"tipo": "Elétrico", "vida": 100, "fraqueza": "Terra", "vantagem": "Água"},
+    "Charmander": {"tipo": "Fogo", "vida": 100, "fraqueza": "Água", "vantagem": "Planta"},
+    "Squirtle": {"tipo": "Água", "vida": 100, "fraqueza": "Elétrico", "vantagem": "Fogo"},
+    "Bulbasaur": {"tipo": "Planta", "vida": 100, "fraqueza": "Fogo", "vantagem": "Água"}
+})
+
 
 SERVER_IP = socket.gethostbyname(socket.gethostname())
 SERVER_PORT = 4242
@@ -16,22 +25,76 @@ class Jogador:
         self.nome = None
         self.socket = socket
         self.socket_adversario = None
-        self.pokemons = None
+        self.pokemons = []
+        self.turno_atual = False
 
     def set_nome(self, nome):
         self.nome = nome
 
     def define_pokemons(self):
         self.socket.send("status|escolha_pokemons".encode(FORMAT))
+
         pokemons_msg = self.socket.recv(1024).decode(FORMAT)
-        pokemons = pokemons_msg.split("|")[1]
+        pokemons = pokemons_msg.split("|")[1].split(",")
+
         print(f"Pokémons escolhidos por {self.nome}: {pokemons}")
-        self.pokemons = pokemons
+        for pokemon in pokemons:
+            self.instancia_pokemon(pokemon)
+        
         self.socket.send("status|aguarde".encode(FORMAT))
+
+    def instancia_pokemon(self, nome_pokemon):
+        pokemon_info = lista_pokemons.__getitem__(nome_pokemon).value
+        pokemon = Pokemon(
+            nome=nome_pokemon,
+            tipo=pokemon_info["tipo"],
+            vida=pokemon_info["vida"],
+            fraqueza=pokemon_info["fraqueza"],
+            vantagem=pokemon_info["vantagem"]
+        )
+        self.pokemons.append(pokemon)
 
     def gerenciar_turnos(self):
         while True:
-            pass
+
+            data = self.socket.recv(1024).decode(FORMAT)
+
+            if data:
+                tipo_mensagem, mensagem = mensagem.split("|", 1)
+
+                pass
+
+
+# Criando a classe Pokémon e seus métodos
+class Pokemon:
+    def __init__(self, nome, tipo, vida, fraqueza, vantagem):
+        self.nome = nome
+        self.tipo = tipo
+        self._vida = vida
+        self.fraqueza = fraqueza
+        self.vantagem = vantagem
+
+    def vida(self, valor):
+        if valor < 0:
+            self._vida = 0
+        else:
+            self._vida = valor
+
+    def perderVida(self, valor):
+        self._vida = self._vida - valor
+        if self._vida < 0:
+            self._vida = 0
+
+    # Método para verificar se o Pokémon está morto
+    def morrer(self):
+        if self._vida <= 0:
+            print(f"{self.nome} morreu!")
+        else:
+            print(f"{self.nome} ainda está vivo com {self._vida} de vida.")
+
+    def __str__(self):
+        return (f"Nome: {self.nome}, Tipo: {self.tipo}, Vida: {self.vida}, "
+                f"Fraqueza: {self.fraqueza}, Vantagem: {self.vantagem}")
 
 
 def get_jogador_info(jogador):
