@@ -7,6 +7,7 @@ PORT = 4242
 SERVER = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER, PORT)
 
+# Criando a classe Pokémon e seus métodos
 class Pokemon:
     def __init__(self, nome, tipo, vida, fraqueza, vantagem):
         self.nome = nome
@@ -25,7 +26,7 @@ class Pokemon:
         self._vida = self._vida - valor
         if self._vida < 0:
             self._vida = 0
-        
+
     # Método para verificar se o Pokémon está morto
     def morrer(self):
         if self._vida <= 0:
@@ -37,30 +38,40 @@ class Pokemon:
         return (f"Nome: {self.nome}, Tipo: {self.tipo}, Vida: {self.vida}, "
                 f"Fraqueza: {self.fraqueza}, Vantagem: {self.vantagem}")
 
+
 # Definindo Pokémon com atributos específicos
 pokemons = [
-    Pokemon(nome="Charmander", tipo="Fogo", vida=100, fraqueza="Água", vantagem="Planta"),
-    Pokemon(nome="Bulbasaur", tipo="Planta", vida=100, fraqueza="Fogo", vantagem="Água"),
-    Pokemon(nome="Squirtle", tipo="Água", vida=100, fraqueza="Elétrico", vantagem="Fogo"),
-    Pokemon(nome="Pikachu", tipo="Elétrico", vida=100, fraqueza="Terra", vantagem="Água")
+    Pokemon(nome="Charmander", tipo="Fogo", vida=100,
+            fraqueza="Água", vantagem="Planta"),
+    Pokemon(nome="Bulbasaur", tipo="Planta", vida=100,
+            fraqueza="Fogo", vantagem="Água"),
+    Pokemon(nome="Squirtle", tipo="Água", vida=100,
+            fraqueza="Elétrico", vantagem="Fogo"),
+    Pokemon(nome="Pikachu", tipo="Elétrico", vida=100,
+            fraqueza="Terra", vantagem="Água")
 ]
 
+
 def escolher_pokemons(cliente):
-    choices = [str(pokemon) for pokemon in pokemons]
+    choices = [str(pokemon.nome) for pokemon in pokemons]
     pokemons_prompt = [
-        inquirer.Checkbox("pokemons", message="Escolha seus pokémons (max 2)", choices=choices, default=[])
+        inquirer.Checkbox(
+            "pokemons", message="Escolha seus pokémons (max 2)", choices=choices, default=[])
     ]
 
-    pokemons_escolhidos = inquirer.prompt(pokemons_prompt, theme=BlueComposure())
+    pokemons_escolhidos = inquirer.prompt(
+        pokemons_prompt, theme=BlueComposure())
+
     # Convertendo nomes dos Pokémon selecionados para objetos Pokemon
     nomes_escolhidos = pokemons_escolhidos['pokemons']
-    pokemons_selecionados = [pokemon for pokemon in pokemons if pokemon.nome in nomes_escolhidos]
-    
-    pokemons_str = ','.join([pokemon.nome for pokemon in pokemons_selecionados])
+    pokemons_selecionados = [
+        pokemon for pokemon in pokemons if pokemon.nome in nomes_escolhidos]
+
+    pokemons_str = ','.join(
+        [pokemon.nome for pokemon in pokemons_selecionados])
+
     cliente.send(f"pokemons_escolhidos|{pokemons_str}".encode("utf-8"))
 
-    resposta = cliente.recv(1024).decode("utf-8")
-    print(resposta)  # Exibe resposta do servidor sobre os pokémons
 
 def escolher_acao(cliente):
     acoes = [
@@ -72,8 +83,8 @@ def escolher_acao(cliente):
     acao_escolhida = inquirer.prompt(acoes, theme=BlueComposure())
     cliente.send(f"acao_escolhida|{acao_escolhida['acao']}".encode("utf-8"))
 
-    resposta = cliente.recv(1024).decode("utf-8")
-    print(resposta)  # Exibe resposta do servidor sobre a ação
+    return acao_escolhida['acao']
+
 
 if __name__ == "__main__":
     try:
@@ -90,7 +101,21 @@ if __name__ == "__main__":
     print("Conectado ao servidor!")
 
     while True:
-        escolher_pokemons(cliente)
-        escolher_acao(cliente)
+        mensagem = cliente.recv(1024).decode("utf-8")
+
+        print(mensagem)
+
+        tipo_mensagem, mensagem = mensagem.split("|", 1)
         
-        cliente.recv(1024)  
+        if tipo_mensagem == "status":
+            if mensagem == "escolha_pokemons":
+                escolher_pokemons(cliente)
+                cliente.send("status|pronto".encode("utf-8"))
+            
+            if mensagem == "aguarde":
+                print("Aguardando o outro jogador escolher os pokémons...")
+                while mensagem == "aguarde":
+                    mensagem = cliente.recv(1024).decode("utf-8")
+
+            if mensagem == "batalha_iniciada":
+                print("A batalha está prestes a começar!")

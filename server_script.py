@@ -11,16 +11,6 @@ servidor.bind(ADDR)
 servidor.listen(2)
 
 
-class Pokemon:
-    def __init__(self):
-        self.nome = None
-        self.tipo = None
-        self.ataques = [None]
-        self.vida = None
-        self.fraqueza = None
-        self.vantagem = None
-
-
 class Jogador:
     def __init__(self, socket):
         self.nome = None
@@ -32,10 +22,16 @@ class Jogador:
         self.nome = nome
 
     def define_pokemons(self):
+        self.socket.send("status|escolha_pokemons".encode(FORMAT))
         pokemons_msg = self.socket.recv(1024).decode(FORMAT)
         pokemons = pokemons_msg.split("|")[1]
         print(f"Pokémons escolhidos por {self.nome}: {pokemons}")
         self.pokemons = pokemons
+        self.socket.send("status|aguarde".encode(FORMAT))
+
+    def gerenciar_turnos(self):
+        while True:
+            pass
 
 
 def get_jogador_info(jogador):
@@ -43,6 +39,12 @@ def get_jogador_info(jogador):
     nome = nome_msg.split("|")[1]
     jogador.set_nome(nome)
     print(f"Jogador conectado: {jogador.nome}")
+    jogador.define_pokemons()
+
+
+def envia_mensagem_simultanea(jogador1, jogador2, mensagem):
+    jogador1.socket.send(mensagem.encode(FORMAT))
+    jogador2.socket.send(mensagem.encode(FORMAT))
 
 
 def main():
@@ -59,7 +61,6 @@ def main():
                 jogador1), args=(jogador1, socket_cliente))
             jogador1_thread.start()
 
-
         else:
             jogador2 = Jogador(socket_cliente)
             jogador2_thread = threading.Thread(target=get_jogador_info(
@@ -69,9 +70,20 @@ def main():
             jogador1_thread.join()
             jogador2_thread.join()
 
-            jogador1.define_pokemons()
-            jogador2.define_pokemons()
+            envia_mensagem_simultanea(jogador1, jogador2, "status|jogo_pronto")
 
+            j1_pronto = jogador1.socket.recv(1024).decode(FORMAT).split("|")[1]
+            j2_pronto = jogador2.socket.recv(1024).decode(FORMAT).split("|")[1]
+
+            if j1_pronto != "pronto" and j2_pronto != "pronto":
+                print("Erro inesperado!")
+                exit()
+
+            envia_mensagem_simultanea(
+                jogador1, jogador2, "status|batalha_iniciada")
+
+    threading.Thread(target=jogador1.gerenciar_turnos()).start()
+    threading.Thread(target=jogador2.gerenciar_turnos()).start()
 
 
 if __name__ == "__main__":
