@@ -1,12 +1,13 @@
 import socket
 import threading
+import random
 from enum import Enum
 
 lista_pokemons = Enum("Pokemons", {
-    "Pikachu": {"tipo": "Elétrico", "vida": 100, "fraqueza": "Terra", "vantagem": "Água"},
-    "Charmander": {"tipo": "Fogo", "vida": 100, "fraqueza": "Água", "vantagem": "Planta"},
-    "Squirtle": {"tipo": "Água", "vida": 100, "fraqueza": "Elétrico", "vantagem": "Fogo"},
-    "Bulbasaur": {"tipo": "Planta", "vida": 100, "fraqueza": "Fogo", "vantagem": "Água"}
+    "Pikachu": {"tipo": "Elétrico", "vida": 100, "fraqueza": "Terra", "vantagem": "Água", "ataques": [{"Choque do trovão": 10}, {"Cauda de ferro": 15}]},
+    "Charmander": {"tipo": "Fogo", "vida": 100, "fraqueza": "Água", "vantagem": "Planta", "ataques": [{"Brasa": 10}, {"Lança-chamas": 15}]},
+    "Squirtle": {"tipo": "Água", "vida": 100, "fraqueza": "Elétrico", "vantagem": "Fogo", "ataques": [{"Bolha": 10}, {"Hidro bomba": 15}]},
+    "Bulbasaur": {"tipo": "Planta", "vida": 100, "fraqueza": "Fogo", "vantagem": "Água", "ataques": [{"Folha navalha": 10}, {"Raio solar": 15}]}
 })
 
 
@@ -40,7 +41,7 @@ class Jogador:
         print(f"Pokémons escolhidos por {self.nome}: {pokemons}")
         for pokemon in pokemons:
             self.instancia_pokemon(pokemon)
-        
+
         self.socket.send("status|aguarde".encode(FORMAT))
 
     def instancia_pokemon(self, nome_pokemon):
@@ -50,29 +51,21 @@ class Jogador:
             tipo=pokemon_info["tipo"],
             vida=pokemon_info["vida"],
             fraqueza=pokemon_info["fraqueza"],
-            vantagem=pokemon_info["vantagem"]
+            vantagem=pokemon_info["vantagem"],
+            ataques=pokemon_info["ataques"],
         )
         self.pokemons.append(pokemon)
-
-    def gerenciar_turnos(self):
-        while True:
-
-            data = self.socket.recv(1024).decode(FORMAT)
-
-            if data:
-                tipo_mensagem, mensagem = mensagem.split("|", 1)
-
-                pass
 
 
 # Criando a classe Pokémon e seus métodos
 class Pokemon:
-    def __init__(self, nome, tipo, vida, fraqueza, vantagem):
+    def __init__(self, nome, tipo, vida, fraqueza, vantagem, ataques):
         self.nome = nome
         self.tipo = tipo
         self._vida = vida
         self.fraqueza = fraqueza
         self.vantagem = vantagem
+        self.ataques = ataques
 
     def vida(self, valor):
         if valor < 0:
@@ -110,6 +103,29 @@ def envia_mensagem_simultanea(jogador1, jogador2, mensagem):
     jogador2.socket.send(mensagem.encode(FORMAT))
 
 
+def gerenciar_turnos(jogador, adversario, turno_condicao):
+    while True:
+        with turno_condicao:
+            while not jogador.turno_atual:
+                turno_condicao.wait()
+
+            jogador.socket.send("status|sua_vez".encode(FORMAT))
+            # Aqui você pode adicionar a lógica do turno do jogador
+            data = jogador.socket.recv(1024).decode(FORMAT)
+
+            if data:
+                tipo_mensagem, mensagem = data.split("|", 1)
+                if tipo_mensagem == "acao_escolhida":
+                    if mensagem == "Atacar":
+                        # Lógica de ataque
+                        pass
+
+            # Troca de turno
+            jogador.turno_atual = False
+            adversario.turno_atual = True
+            turno_condicao.notify_all()
+
+
 def main():
     print(f"Servidor rodando em {SERVER_IP}:{SERVER_PORT}")
     num_conexoes = 0
@@ -145,8 +161,20 @@ def main():
             envia_mensagem_simultanea(
                 jogador1, jogador2, "status|batalha_iniciada")
 
-    threading.Thread(target=jogador1.gerenciar_turnos()).start()
-    threading.Thread(target=jogador2.gerenciar_turnos()).start()
+    if random.randint(0, 1) == 0:
+        jogador1.turno_atual = True
+        jogador2.turno_atual = False
+    else:
+        jogador1.turno_atual = False
+        jogador2.turno_atual = True
+
+    turno_condicao = threading.Condition()
+
+    # Iniciar as threads de gerenciamento de turnos
+    threading.Thread(target=gerenciar_turnos,
+                     args=(jogador1, jogador2, turno_condicao)).start()
+    threading.Thread(target=gerenciar_turnos,
+                     args=(jogador2, jogador1, turno_condicao)).start()
 
 
 if __name__ == "__main__":

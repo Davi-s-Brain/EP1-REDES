@@ -30,7 +30,7 @@ def escolher_pokemons(cliente):
     cliente.send(f"pokemons_escolhidos|{pokemons_str}".encode("utf-8"))
 
 
-def escolher_acao(cliente):
+def escolher_acao():
     acoes = [
         inquirer.List("acao", message="O que será feito?", choices=[
             "Atacar", "Itens", "Fugir"
@@ -38,9 +38,12 @@ def escolher_acao(cliente):
     ]
 
     acao_escolhida = inquirer.prompt(acoes, theme=BlueComposure())
-    cliente.send(f"acao_escolhida|{acao_escolhida['acao']}".encode("utf-8"))
 
     return acao_escolhida['acao']
+
+
+def atacar(cliente):
+    pass
 
 
 if __name__ == "__main__":
@@ -53,16 +56,16 @@ if __name__ == "__main__":
 
     typer.echo("Bem-vindo à batalha Pokémon!")
 
-    nome = typer.prompt("Digite seu nome: ")
+    nome = typer.prompt("Digite seu nome")
     cliente.send(f"nome|{nome}".encode("utf-8"))
     print("Conectado ao servidor!")
 
     while True:
         mensagem = cliente.recv(1024).decode("utf-8")
 
-        print(mensagem)
-
         tipo_mensagem, mensagem = mensagem.split("|", 1)
+
+        print(f"{tipo_mensagem, mensagem}\n")
 
         if tipo_mensagem == "status":
             if mensagem == "escolha_pokemons":
@@ -76,3 +79,8 @@ if __name__ == "__main__":
 
             if mensagem == "batalha_iniciada":
                 print("A batalha está prestes a começar!")
+
+            if mensagem == "sua_vez":
+                print("É a sua vez de jogar!")
+                escolher_acao()
+                # cliente.send(f"acao|{acao}".encode("utf-8"))
