@@ -1,20 +1,14 @@
 import socket
 import threading
-import random
-from enum import Enum
-
-lista_pokemons = Enum("Pokemons", {
-    "Pikachu": {"tipo": "Elétrico", "vida": 100, "fraqueza": "Terra", "vantagem": "Água", "ataques": [{"Choque do trovão": 10}, {"Cauda de ferro": 15}]},
-    "Charmander": {"tipo": "Fogo", "vida": 100, "fraqueza": "Água", "vantagem": "Planta", "ataques": [{"Brasa": 10}, {"Lança-chamas": 15}]},
-    "Squirtle": {"tipo": "Água", "vida": 100, "fraqueza": "Elétrico", "vantagem": "Fogo", "ataques": [{"Bolha": 10}, {"Hidro bomba": 15}]},
-    "Bulbasaur": {"tipo": "Planta", "vida": 100, "fraqueza": "Fogo", "vantagem": "Água", "ataques": [{"Folha navalha": 10}, {"Raio solar": 15}]}
-})
+from lista_pokemons import lista_pokemons
 
 
 SERVER_IP = socket.gethostbyname(socket.gethostname())
 SERVER_PORT = 4242
 ADDR = (SERVER_IP, SERVER_PORT)
 FORMAT = "utf-8"
+turno = ""
+fim_de_jogo = False
 
 servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 servidor.bind(ADDR)
@@ -27,13 +21,12 @@ class Jogador:
         self.socket = socket
         self.socket_adversario = None
         self.pokemons = []
-        self.turno_atual = False
 
     def set_nome(self, nome):
         self.nome = nome
 
     def define_pokemons(self):
-        self.socket.send("status|escolha_pokemons".encode(FORMAT))
+        self.socket.send("status|escolha_pokemons\n".encode(FORMAT))
 
         pokemons_msg = self.socket.recv(1024).decode(FORMAT)
         pokemons = pokemons_msg.split("|")[1].split(",")
@@ -42,7 +35,7 @@ class Jogador:
         for pokemon in pokemons:
             self.instancia_pokemon(pokemon)
 
-        self.socket.send("status|aguarde".encode(FORMAT))
+        self.socket.send("status|jogo_pronto\n".encode(FORMAT))
 
     def instancia_pokemon(self, nome_pokemon):
         pokemon_info = lista_pokemons.__getitem__(nome_pokemon).value
@@ -99,26 +92,34 @@ def get_jogador_info(jogador):
 
 
 def envia_mensagem_simultanea(jogador1, jogador2, mensagem):
-    jogador1.socket.send(mensagem.encode(FORMAT))
-    jogador2.socket.send(mensagem.encode(FORMAT))
+    mensagem_bytes = f"{mensagem}\n".encode(FORMAT)
+    jogador1.socket.send(mensagem_bytes)
+    jogador2.socket.send(mensagem_bytes)
 
 
-def gerenciar_turnos(jogador, adversario, turno_condicao):
-    while True:
+def gerenciar_turnos(jogador, adversario, turno_condicao, turno):
+    global fim_de_jogo
+
+    while not fim_de_jogo:
         with turno_condicao:
-            while not jogador.turno_atual:
+            while turno != jogador.nome:
+                jogador.send("status|aguarde\n".encode(FORMAT))
                 turno_condicao.wait()
 
-            jogador.socket.send("status|sua_vez".encode(FORMAT))
-            # Aqui você pode adicionar a lógica do turno do jogador
+            jogador.socket.send("status|sua_vez\n".encode(FORMAT))
+
             data = jogador.socket.recv(1024).decode(FORMAT)
 
             if data:
                 tipo_mensagem, mensagem = data.split("|", 1)
                 if tipo_mensagem == "acao_escolhida":
                     if mensagem == "Atacar":
-                        # Lógica de ataque
-                        pass
+                        ataque = jogador.escolher_ataque()
+                        adversario.pokemon_atual.perderVida(ataque["dano"])
+                        jogador.socket.send(
+                            f"status|ataque_realizado|{ataque['nome']}\n".encode(FORMAT))
+                        adversario.socket.send(
+                            f"status|ataque_recebido|{ataque['nome']}\n".encode(FORMAT))
 
             # Troca de turno
             jogador.turno_atual = False
@@ -154,27 +155,22 @@ def main():
             j1_pronto = jogador1.socket.recv(1024).decode(FORMAT).split("|")[1]
             j2_pronto = jogador2.socket.recv(1024).decode(FORMAT).split("|")[1]
 
-            if j1_pronto != "pronto" and j2_pronto != "pronto":
+            if j1_pronto != "pronto\n" and j2_pronto != "pronto\n":
                 print("Erro inesperado!")
                 exit()
 
-            envia_mensagem_simultanea(
-                jogador1, jogador2, "status|batalha_iniciada")
-
-    if random.randint(0, 1) == 0:
-        jogador1.turno_atual = True
-        jogador2.turno_atual = False
-    else:
-        jogador1.turno_atual = False
-        jogador2.turno_atual = True
+            turno = jogador1.nome
 
     turno_condicao = threading.Condition()
 
     # Iniciar as threads de gerenciamento de turnos
-    threading.Thread(target=gerenciar_turnos,
-                     args=(jogador1, jogador2, turno_condicao)).start()
-    threading.Thread(target=gerenciar_turnos,
-                     args=(jogador2, jogador1, turno_condicao)).start()
+    thread1 = threading.Thread(target=gerenciar_turnos,
+                               args=(jogador1, jogador2, turno_condicao, turno))
+    thread2 = threading.Thread(target=gerenciar_turnos,
+                               args=(jogador2, jogador1, turno_condicao, turno))
+
+    thread1.start()
+    thread2.start()
 
 
 if __name__ == "__main__":

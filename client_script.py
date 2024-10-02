@@ -1,21 +1,24 @@
 import socket
 import inquirer
 import typer
+from lista_pokemons import lista_pokemons
 from inquirer.themes import BlueComposure
 
 PORT = 4242
 SERVER = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER, PORT)
+FORMAT = "utf-8"
 
 
 # Definindo os Pokémons
-pokemons = ["Charmander", "Bulbasaur", "Squirtle", "Pikachu"]
+nomes_pokemons = [pokemon.name for pokemon in lista_pokemons]
+pokemons_jogador = []
 
 
 def escolher_pokemons(cliente):
     pokemons_prompt = [
         inquirer.Checkbox(
-            "pokemons", message="Escolha seus pokémons (max 2)", choices=pokemons, default=[])
+            "pokemons", message="Escolha seus pokémons (max 2)", choices=nomes_pokemons, default=[])
     ]
 
     pokemons_escolhidos = inquirer.prompt(
@@ -23,11 +26,14 @@ def escolher_pokemons(cliente):
 
     # Convertendo nomes dos Pokémon selecionados para objetos Pokemon
     pokemons_selecionados = pokemons_escolhidos['pokemons']
+    pokemons_jogador.extend(pokemons_selecionados)
 
     pokemons_str = ','.join(
         [pokemon for pokemon in pokemons_selecionados])
 
-    cliente.send(f"pokemons_escolhidos|{pokemons_str}".encode("utf-8"))
+    cliente.send(f"pokemons_escolhidos|{pokemons_str}".encode(FORMAT))
+
+    return pokemons_selecionados
 
 
 def escolher_acao():
@@ -37,9 +43,19 @@ def escolher_acao():
         ], default="Atacar")
     ]
 
+    ataques = [
+        inquirer.List("ataque", message="Escolha um ataque", choices=[
+            "Ataque 1", "Ataque 2"
+        ], default="Ataque 1")
+    ]
+
     acao_escolhida = inquirer.prompt(acoes, theme=BlueComposure())
 
-    return acao_escolhida['acao']
+    if acao_escolhida["acao"] == "Atacar":
+        ataque_escolhido = inquirer.prompt(ataques, theme=BlueComposure())
+
+        return ataque_escolhido["ataque"]
+
 
 
 def atacar(cliente):
@@ -57,30 +73,37 @@ if __name__ == "__main__":
     typer.echo("Bem-vindo à batalha Pokémon!")
 
     nome = typer.prompt("Digite seu nome")
-    cliente.send(f"nome|{nome}".encode("utf-8"))
+    cliente.send(f"nome|{nome}\n".encode(FORMAT))
     print("Conectado ao servidor!")
 
+    buffer = ""
+
     while True:
-        mensagem = cliente.recv(1024).decode("utf-8")
+        buffer += cliente.recv(1024).decode(FORMAT)
+        mensagens = buffer.split("\n")
 
-        tipo_mensagem, mensagem = mensagem.split("|", 1)
+        for mensagem in mensagens[:-1]:
+            if not buffer:
+                continue 
 
-        print(f"{tipo_mensagem, mensagem}\n")
+            tipo_mensagem, buffer = buffer.split("|", 1)
+            tipo_mensagem = tipo_mensagem.strip()
+            buffer = buffer.strip()
 
-        if tipo_mensagem == "status":
-            if mensagem == "escolha_pokemons":
-                escolher_pokemons(cliente)
-                cliente.send("status|pronto".encode("utf-8"))
+            if tipo_mensagem == "status":
+                if buffer == "escolha_pokemons":
+                    pokemons_jogador = escolher_pokemons(cliente)
 
-            if mensagem == "aguarde":
-                print("Aguardando o outro jogador escolher os pokémons...")
-                while mensagem == "aguarde":
-                    mensagem = cliente.recv(1024).decode("utf-8")
+                elif buffer == "jogo_pronto":
+                    cliente.send("status|pronto\n".encode(FORMAT))
+                    typer.echo("Aguardando o outro jogador para começær...")
 
-            if mensagem == "batalha_iniciada":
-                print("A batalha está prestes a começar!")
+                elif buffer == "sua_vez":
+                    print("É a sua vez de jogar!")
+                    acao = escolher_acao()
+                    cliente.send(f"acao_escolhida|{acao}\n".encode(FORMAT))
+                
+                elif buffer == "aguarde":
+                    print("Aguarde o outro jogador realizar sua ação...")
 
-            if mensagem == "sua_vez":
-                print("É a sua vez de jogar!")
-                escolher_acao()
-                # cliente.send(f"acao|{acao}".encode("utf-8"))
+            buffer = mensagens[-1]
