@@ -7,7 +7,6 @@ SERVER_IP = socket.gethostbyname(socket.gethostname())
 SERVER_PORT = 4242
 ADDR = (SERVER_IP, SERVER_PORT)
 FORMAT = "utf-8"
-turno = ""
 fim_de_jogo = False
 
 servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -97,34 +96,36 @@ def envia_mensagem_simultanea(jogador1, jogador2, mensagem):
     jogador2.socket.send(mensagem_bytes)
 
 
-def gerenciar_turnos(jogador, adversario, turno_condicao, turno):
+def gerenciar_turnos(jogador, adversario, turno_condicao):
     global fim_de_jogo
+
+    # turno = [jogador.nome, adversario.nome]
+    # turno_atual = turno[0]
 
     while not fim_de_jogo:
         with turno_condicao:
-            while turno != jogador.nome:
-                jogador.send("status|aguarde\n".encode(FORMAT))
-                turno_condicao.wait()
+            while not turno_condicao:
+                jogador.socket.send("status|aguarde\n".encode(FORMAT))
+                turno_condicao.wait_for(turno_condicao)
 
             jogador.socket.send("status|sua_vez\n".encode(FORMAT))
 
             data = jogador.socket.recv(1024).decode(FORMAT)
 
+            print(data)
             if data:
                 tipo_mensagem, mensagem = data.split("|", 1)
-                if tipo_mensagem == "acao_escolhida":
-                    if mensagem == "Atacar":
-                        ataque = jogador.escolher_ataque()
-                        adversario.pokemon_atual.perderVida(ataque["dano"])
-                        jogador.socket.send(
-                            f"status|ataque_realizado|{ataque['nome']}\n".encode(FORMAT))
-                        adversario.socket.send(
-                            f"status|ataque_recebido|{ataque['nome']}\n".encode(FORMAT))
+                
+                if tipo_mensagem == "ataque":
+                    print(mensagem)
+
 
             # Troca de turno
-            jogador.turno_atual = False
-            adversario.turno_atual = True
+            # turno_atual = turno[1] if turno_atual == turno[0] else turno[0]
             turno_condicao.notify_all()
+    
+    jogador.socket.close()
+    adversario.socket.close()
 
 
 def main():
@@ -159,15 +160,14 @@ def main():
                 print("Erro inesperado!")
                 exit()
 
-            turno = jogador1.nome
 
     turno_condicao = threading.Condition()
 
     # Iniciar as threads de gerenciamento de turnos
     thread1 = threading.Thread(target=gerenciar_turnos,
-                               args=(jogador1, jogador2, turno_condicao, turno))
+                               args=(jogador1, jogador2, turno_condicao))
     thread2 = threading.Thread(target=gerenciar_turnos,
-                               args=(jogador2, jogador1, turno_condicao, turno))
+                               args=(jogador2, jogador1, turno_condicao))
 
     thread1.start()
     thread2.start()

@@ -36,30 +36,39 @@ def escolher_pokemons(cliente):
     return pokemons_selecionados
 
 
-def escolher_acao():
+def escolher_acao(cliente, pokemons_jogador):
     acoes = [
         inquirer.List("acao", message="O que será feito?", choices=[
             "Atacar", "Itens", "Fugir"
         ], default="Atacar")
     ]
 
-    ataques = [
-        inquirer.List("ataque", message="Escolha um ataque", choices=[
-            "Ataque 1", "Ataque 2"
-        ], default="Ataque 1")
-    ]
-
     acao_escolhida = inquirer.prompt(acoes, theme=BlueComposure())
 
     if acao_escolhida["acao"] == "Atacar":
-        ataque_escolhido = inquirer.prompt(ataques, theme=BlueComposure())
+        atacar(cliente, pokemons_jogador)
 
-        return ataque_escolhido["ataque"]
+    elif acao_escolhida["acao"] == "Itens":
+        pass
+
+    elif acao_escolhida["acao"] == "Fugir":
+        pass
 
 
+def atacar(cliente, pokemons_escolhidos):
+    pokemon_atual = lista_pokemons[pokemons_escolhidos[0]]
+    ataques_disponiveis = pokemon_atual.value["ataques"]
+    
+    ataques = [
+        inquirer.List("ataque", message="Escolha um ataque", choices=[
+            ataques_disponiveis[0], ataques_disponiveis[1]
+        ], default="Ataque 1")
+    ]
 
-def atacar(cliente):
-    pass
+    ataque_escolhido = inquirer.prompt(ataques, theme=BlueComposure())
+
+    cliente.send(f"ataque|{pokemon_atual}|{ataque_escolhido['ataque']}".encode(FORMAT))
+
 
 
 if __name__ == "__main__":
@@ -84,7 +93,7 @@ if __name__ == "__main__":
 
         for mensagem in mensagens[:-1]:
             if not buffer:
-                continue 
+                continue
 
             tipo_mensagem, buffer = buffer.split("|", 1)
             tipo_mensagem = tipo_mensagem.strip()
@@ -100,9 +109,8 @@ if __name__ == "__main__":
 
                 elif buffer == "sua_vez":
                     print("É a sua vez de jogar!")
-                    acao = escolher_acao()
-                    cliente.send(f"acao_escolhida|{acao}\n".encode(FORMAT))
-                
+                    acao = escolher_acao(cliente, pokemons_jogador)
+
                 elif buffer == "aguarde":
                     print("Aguarde o outro jogador realizar sua ação...")
 
