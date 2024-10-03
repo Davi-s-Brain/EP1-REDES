@@ -1,68 +1,44 @@
+import re
+import sys
 import socket
 import inquirer
 import typer
+from lista_pokemons import lista_pokemons
 from inquirer.themes import BlueComposure
 
 PORT = 4242
 SERVER = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER, PORT)
+FORMAT = "utf-8"
 
-class Pokemon:
-    def __init__(self, nome, tipo, vida, fraqueza, vantagem):
-        self.nome = nome
-        self.tipo = tipo
-        self._vida = vida
-        self.fraqueza = fraqueza
-        self.vantagem = vantagem
 
-    def vida(self, valor):
-        if valor < 0:
-            self._vida = 0
-        else:
-            self._vida = valor
+# Definindo os Pokémons
+nomes_pokemons = [pokemon.name for pokemon in lista_pokemons]
+pokemons_jogador = []
 
-    def perderVida(self, valor):
-        self._vida = self._vida - valor
-        if self._vida < 0:
-            self._vida = 0
-        
-    # Método para verificar se o Pokémon está morto
-    def morrer(self):
-        if self._vida <= 0:
-            print(f"{self.nome} morreu!")
-        else:
-            print(f"{self.nome} ainda está vivo com {self._vida} de vida.")
-
-    def __str__(self):
-        return (f"Nome: {self.nome}, Tipo: {self.tipo}, Vida: {self.vida}, "
-                f"Fraqueza: {self.fraqueza}, Vantagem: {self.vantagem}")
-
-# Definindo Pokémon com atributos específicos
-pokemons = [
-    Pokemon(nome="Charmander", tipo="Fogo", vida=100, fraqueza="Água", vantagem="Planta"),
-    Pokemon(nome="Bulbasaur", tipo="Planta", vida=100, fraqueza="Fogo", vantagem="Água"),
-    Pokemon(nome="Squirtle", tipo="Água", vida=100, fraqueza="Elétrico", vantagem="Fogo"),
-    Pokemon(nome="Pikachu", tipo="Elétrico", vida=100, fraqueza="Terra", vantagem="Água")
-]
 
 def escolher_pokemons(cliente):
-    choices = [str(pokemon) for pokemon in pokemons]
     pokemons_prompt = [
-        inquirer.Checkbox("pokemons", message="Escolha seus pokémons (max 2)", choices=choices, default=[])
+        inquirer.Checkbox(
+            "pokemons", message="Escolha seus pokémons (max 2)", choices=nomes_pokemons, default=[])
     ]
 
-    pokemons_escolhidos = inquirer.prompt(pokemons_prompt, theme=BlueComposure())
+    pokemons_escolhidos = inquirer.prompt(
+        pokemons_prompt, theme=BlueComposure())
+
     # Convertendo nomes dos Pokémon selecionados para objetos Pokemon
-    nomes_escolhidos = pokemons_escolhidos['pokemons']
-    pokemons_selecionados = [pokemon for pokemon in pokemons if pokemon.nome in nomes_escolhidos]
-    
-    pokemons_str = ','.join([pokemon.nome for pokemon in pokemons_selecionados])
-    cliente.send(f"pokemons_escolhidos|{pokemons_str}".encode("utf-8"))
+    pokemons_selecionados = pokemons_escolhidos['pokemons']
+    pokemons_jogador.extend(pokemons_selecionados)
 
-    resposta = cliente.recv(1024).decode("utf-8")
-    print(resposta)  # Exibe resposta do servidor sobre os pokémons
+    pokemons_str = ','.join(
+        [pokemon for pokemon in pokemons_selecionados])
 
-def escolher_acao(cliente):
+    cliente.send(f"pokemons_escolhidos|{pokemons_str}".encode(FORMAT))
+
+    return pokemons_selecionados
+
+
+def escolher_acao(cliente, pokemons_jogador):
     acoes = [
         inquirer.List("acao", message="O que será feito?", choices=[
             "Atacar", "Itens", "Fugir"
@@ -70,10 +46,43 @@ def escolher_acao(cliente):
     ]
 
     acao_escolhida = inquirer.prompt(acoes, theme=BlueComposure())
-    cliente.send(f"acao_escolhida|{acao_escolhida['acao']}".encode("utf-8"))
 
-    resposta = cliente.recv(1024).decode("utf-8")
-    print(resposta)  # Exibe resposta do servidor sobre a ação
+    if acao_escolhida["acao"] == "Atacar":
+        atacar(cliente, pokemons_jogador)
+
+    elif acao_escolhida["acao"] == "Itens":
+        pass
+
+    elif acao_escolhida["acao"] == "Fugir":
+        pass
+
+
+def atacar(cliente, pokemons_escolhidos):
+    pokemon_atual = lista_pokemons[pokemons_escolhidos[0]]
+    ataques_disponiveis = pokemon_atual.value["ataques"]
+    lista_ataques = []
+    dano_ataque = 0
+
+    for ataque, dano in ataques_disponiveis.items():
+        lista_ataques.append(f"{ataque} (Dano: {dano})")
+
+    ataques = [
+        inquirer.List("ataque", message="Escolha um ataque", choices=[
+            lista_ataques[0], lista_ataques[1]
+        ], default="")
+    ]
+
+    ataque_escolhido = inquirer.prompt(ataques, theme=BlueComposure())
+
+    match = re.search(r'\(Dano: (\d+)\)', ataque_escolhido["ataque"])
+    if match:
+        dano_ataque = int(match.group(1))
+
+    nome_ataque = ataque_escolhido["ataque"].split(" (")[0]
+
+    cliente.send(
+        f"ataque|{pokemon_atual}|{nome_ataque}|{dano_ataque}".encode(FORMAT))
+
 
 if __name__ == "__main__":
     try:
@@ -85,12 +94,57 @@ if __name__ == "__main__":
 
     typer.echo("Bem-vindo à batalha Pokémon!")
 
-    nome = typer.prompt("Digite seu nome: ")
-    cliente.send(f"nome|{nome}".encode("utf-8"))
+    nome = typer.prompt("Digite seu nome")
+    cliente.send(f"nome|{nome}\n".encode(FORMAT))
     print("Conectado ao servidor!")
 
+    buffer = ""
+
     while True:
-        escolher_pokemons(cliente)
-        escolher_acao(cliente)
-        
-        cliente.recv(1024)  
+        buffer += cliente.recv(1024).decode(FORMAT)
+        mensagens = buffer.split("\n")
+
+        for mensagem in mensagens[:-1]:
+            if not mensagem:
+                continue
+
+            if buffer:
+                tipo_mensagem, conteudo_mensagem = buffer.split("|", 1)
+                tipo_mensagem = tipo_mensagem.strip()
+                conteudo_mensagem = conteudo_mensagem.strip()
+            else:
+                # buffer = ""
+                continue
+
+            # print(f"{tipo_mensagem} - {conteudo_mensagem}")
+
+            if tipo_mensagem == "status":
+                if conteudo_mensagem == "escolha_pokemons":
+                    pokemons_jogador = escolher_pokemons(cliente)
+
+                elif conteudo_mensagem == "jogo_pronto":
+                    cliente.send("status|pronto\n".encode(FORMAT))
+                    typer.echo("Aguardando o outro jogador para começær...")
+
+                elif conteudo_mensagem == "sua_vez":
+                    print("É a sua vez de jogar!")
+                    acao = escolher_acao(cliente, pokemons_jogador)
+
+                elif conteudo_mensagem == "aguarde":
+                    print("Aguarde o outro jogador realizar sua ação...")
+
+                elif conteudo_mensagem == "vitoria":
+                    print("VOCÊ VENCEU! PARABÉNS!")
+                    sys.exit(0)
+
+                elif conteudo_mensagem == "derrota":
+                    print("VOCÊ PERDEU! BOA SORTE NA PRÓXIMA")
+                    sys.exit(0)
+
+            if tipo_mensagem == "ataque_recebido":
+                print(f"Ataque recebido! {conteudo_mensagem}")
+
+            if tipo_mensagem == "morte":
+                print(f"O pokemon {conteudo_mensagem} morreu!")
+
+            buffer = mensagens[-1]
