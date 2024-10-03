@@ -1,3 +1,5 @@
+import re
+import sys
 import socket
 import inquirer
 import typer
@@ -58,17 +60,28 @@ def escolher_acao(cliente, pokemons_jogador):
 def atacar(cliente, pokemons_escolhidos):
     pokemon_atual = lista_pokemons[pokemons_escolhidos[0]]
     ataques_disponiveis = pokemon_atual.value["ataques"]
-    
+    lista_ataques = []
+    dano_ataque = 0
+
+    for ataque, dano in ataques_disponiveis.items():
+        lista_ataques.append(f"{ataque} (Dano: {dano})")
+
     ataques = [
         inquirer.List("ataque", message="Escolha um ataque", choices=[
-            ataques_disponiveis[0], ataques_disponiveis[1]
-        ], default="Ataque 1")
+            lista_ataques[0], lista_ataques[1]
+        ], default="")
     ]
 
     ataque_escolhido = inquirer.prompt(ataques, theme=BlueComposure())
 
-    cliente.send(f"ataque|{pokemon_atual}|{ataque_escolhido['ataque']}".encode(FORMAT))
+    match = re.search(r'\(Dano: (\d+)\)', ataque_escolhido["ataque"])
+    if match:
+        dano_ataque = int(match.group(1))
 
+    nome_ataque = ataque_escolhido["ataque"].split(" (")[0]
+
+    cliente.send(
+        f"ataque|{pokemon_atual}|{nome_ataque}|{dano_ataque}".encode(FORMAT))
 
 
 if __name__ == "__main__":
@@ -92,26 +105,46 @@ if __name__ == "__main__":
         mensagens = buffer.split("\n")
 
         for mensagem in mensagens[:-1]:
-            if not buffer:
+            if not mensagem:
                 continue
 
-            tipo_mensagem, buffer = buffer.split("|", 1)
-            tipo_mensagem = tipo_mensagem.strip()
-            buffer = buffer.strip()
+            if buffer:
+                tipo_mensagem, conteudo_mensagem = buffer.split("|", 1)
+                tipo_mensagem = tipo_mensagem.strip()
+                conteudo_mensagem = conteudo_mensagem.strip()
+            else:
+                # buffer = ""
+                continue
+
+            # print(f"{tipo_mensagem} - {conteudo_mensagem}")
 
             if tipo_mensagem == "status":
-                if buffer == "escolha_pokemons":
+                if conteudo_mensagem == "escolha_pokemons":
                     pokemons_jogador = escolher_pokemons(cliente)
 
-                elif buffer == "jogo_pronto":
+                elif conteudo_mensagem == "jogo_pronto":
                     cliente.send("status|pronto\n".encode(FORMAT))
                     typer.echo("Aguardando o outro jogador para começær...")
 
-                elif buffer == "sua_vez":
+                elif conteudo_mensagem == "sua_vez":
                     print("É a sua vez de jogar!")
                     acao = escolher_acao(cliente, pokemons_jogador)
 
-                elif buffer == "aguarde":
+                elif conteudo_mensagem == "aguarde":
                     print("Aguarde o outro jogador realizar sua ação...")
+
+                elif conteudo_mensagem == "vitoria":
+                    print("VOCÊ VENCEU! PARABÉNS!")
+                    sys.exit(0)
+
+                elif conteudo_mensagem == "derrota":
+                    print("VOCÊ PERDEU! BOA SORTE NA PRÓXIMA")
+                    sys.exit(0)
+
+            if tipo_mensagem == "ataque_recebido":
+                print(f"Ataque recebido! {conteudo_mensagem}")
+
+            if tipo_mensagem == "morte":
+                print(f"O pokemon {conteudo_mensagem} morreu!")
 
             buffer = mensagens[-1]

@@ -1,6 +1,7 @@
 import socket
 import threading
 import sys
+import time
 from lista_pokemons import lista_pokemons
 
 # Configurações do servidor
@@ -17,6 +18,8 @@ servidor.bind(ADDR)
 servidor.listen(2)
 
 # Classe que representa um jogador
+
+
 class Jogador:
     def __init__(self, socket):
         self.nome = None
@@ -55,6 +58,8 @@ class Jogador:
         self.pokemons.append(pokemon)
 
 # Classe que representa um Pokémon
+
+
 class Pokemon:
     def __init__(self, nome, tipo, vida, fraqueza, vantagem, ataques):
         self.nome = nome
@@ -69,11 +74,15 @@ class Pokemon:
         if valor < 0:
             self._vida = 0
         else:
-            self._vida = valor
+            self._vida = int(valor)
+
+    # Retorna a vida atual do Pokemón
+    def get_vida(self):
+        return self._vida
 
     # Reduz a vida do Pokémon
     def perderVida(self, valor):
-        self._vida = self._vida - valor
+        self._vida = self._vida - int(valor)
         if self._vida < 0:
             self._vida = 0
 
@@ -89,26 +98,31 @@ class Pokemon:
                 f"Fraqueza: {self.fraqueza}, Vantagem: {self.vantagem}")
 
 # Função para obter informações do jogador
+
+
 def get_jogador_info(jogador):
     nome_msg = jogador.socket.recv(1024).decode(FORMAT)
-    nome = nome_msg.split("|")[1]
+    nome = nome_msg.split("|")[1].split("\n")[0]
     jogador.set_nome(nome)
     print(f"Jogador conectado: {jogador.nome}")
     jogador.define_pokemons()
 
 # Envia uma mensagem simultaneamente para dois jogadores
+
+
 def envia_mensagem_simultanea(jogador1, jogador2, mensagem):
     mensagem_bytes = f"{mensagem}\n".encode(FORMAT)
     jogador1.socket.send(mensagem_bytes)
     jogador2.socket.send(mensagem_bytes)
 
 # Gerencia os turnos dos jogadores
+
+
 def gerenciar_turnos(jogador, adversario):
     global fim_de_jogo
     turno = [jogador, adversario]
 
     while not fim_de_jogo:
-        print(turno[0])
         jogador_atual = turno[0]
         adversario_atual = turno[1]
 
@@ -117,17 +131,61 @@ def gerenciar_turnos(jogador, adversario):
 
         data = jogador_atual.socket.recv(1024).decode(FORMAT)
 
-        print(data)
         if data:
             tipo_mensagem, mensagem = data.split("|", 1)
 
             if tipo_mensagem == "ataque":
-                print(f"{jogador_atual.nome} atacou com {mensagem}")
+                pokemon_atacante = mensagem.split("|")[0].split(".")[1]
+                ataque = mensagem.split("|")[1]
+                dano = int(mensagem.split("|")[2])
+                mensagem_ataque = f"{jogador_atual.nome} atacou com {pokemon_atacante}, {ataque}"
+
+                # Encontra o Pokémon defensor
+                # Supondo que o primeiro Pokémon é o que está batalhando
+                pokemon_defensor = adversario_atual.pokemons[0]
+
+                # Aplica a lógica de fraqueza
+                if pokemon_defensor.tipo in jogador_atual.pokemons[0].vantagem:
+                    dano *= 2
+                elif pokemon_defensor.tipo in jogador_atual.pokemons[0].fraqueza:
+                    dano //= 2
+
+                # Subtrai os pontos de vida do Pokémon defensor
+                pokemon_defensor.perderVida(dano)
+                print(f"{pokemon_defensor.nome} agora tem {pokemon_defensor._vida} de vida.")
+
+                time.sleep(0.1)
+                adversario_atual.socket.send(
+                    f"ataque_recebido|{mensagem_ataque}\n".encode(FORMAT))
+                time.sleep(0.1)
+
+                # Verifica se o Pokémon defensor morreu
+                if pokemon_defensor.get_vida() <= 0:
+                    adversario_atual.pokemons.pop(0)
+                    time.sleep(0.1)
+                    adversario_atual.socket.send(
+                        f"morte|{pokemon_defensor.nome}\n".encode(FORMAT))
+                    print(f"{pokemon_defensor.nome} morreu!")
+                    time.sleep(0.1)
+
+                    # Verifica se o adversário ainda tem pokémons
+                    if not adversario_atual.pokemons:
+                        jogador_atual.socket.send(
+                            "status|vitoria\n".encode(FORMAT))
+                        adversario_atual.socket.send(
+                            "status|derrota\n".encode(FORMAT))
+                        fim_de_jogo = True
+
 
         # Alterna os turnos
         turno = [adversario_atual, jogador_atual]
+    
+    jogador.socket.close()
+    adversario.socket.close()
 
 # Função principal que inicia o servidor e gerencia as conexões
+
+
 def main():
     print(f"Servidor rodando em {SERVER_IP}:{SERVER_PORT}")
     num_conexoes = 0
@@ -138,12 +196,14 @@ def main():
 
         if num_conexoes == 1:
             jogador1 = Jogador(socket_cliente)
-            jogador1_thread = threading.Thread(target=get_jogador_info, args=(jogador1,))
+            jogador1_thread = threading.Thread(
+                target=get_jogador_info, args=(jogador1,))
             jogador1_thread.start()
 
         else:
             jogador2 = Jogador(socket_cliente)
-            jogador2_thread = threading.Thread(target=get_jogador_info, args=(jogador2,))
+            jogador2_thread = threading.Thread(
+                target=get_jogador_info, args=(jogador2,))
             jogador2_thread.start()
 
             jogador1_thread.join()
@@ -165,6 +225,7 @@ def main():
         print("\nInterrupção via teclado recebida. Fechando o servidor...")
         servidor.close()
         sys.exit(0)
+
 
 # Ponto de entrada do script
 if __name__ == "__main__":
