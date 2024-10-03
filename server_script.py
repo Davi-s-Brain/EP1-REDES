@@ -1,19 +1,22 @@
 import socket
 import threading
+import sys
 from lista_pokemons import lista_pokemons
 
-
+# Configurações do servidor
 SERVER_IP = socket.gethostbyname(socket.gethostname())
 SERVER_PORT = 4242
 ADDR = (SERVER_IP, SERVER_PORT)
 FORMAT = "utf-8"
 fim_de_jogo = False
 
+# Criação do socket do servidor
 servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 servidor.bind(ADDR)
 servidor.listen(2)
 
-
+# Classe que representa um jogador
 class Jogador:
     def __init__(self, socket):
         self.nome = None
@@ -21,9 +24,11 @@ class Jogador:
         self.socket_adversario = None
         self.pokemons = []
 
+    # Define o nome do jogador
     def set_nome(self, nome):
         self.nome = nome
 
+    # Recebe e define os pokémons escolhidos pelo jogador
     def define_pokemons(self):
         self.socket.send("status|escolha_pokemons\n".encode(FORMAT))
 
@@ -36,6 +41,7 @@ class Jogador:
 
         self.socket.send("status|jogo_pronto\n".encode(FORMAT))
 
+    # Instancia um pokémon com base nas informações da lista de pokémons
     def instancia_pokemon(self, nome_pokemon):
         pokemon_info = lista_pokemons.__getitem__(nome_pokemon).value
         pokemon = Pokemon(
@@ -48,8 +54,7 @@ class Jogador:
         )
         self.pokemons.append(pokemon)
 
-
-# Criando a classe Pokémon e seus métodos
+# Classe que representa um Pokémon
 class Pokemon:
     def __init__(self, nome, tipo, vida, fraqueza, vantagem, ataques):
         self.nome = nome
@@ -59,18 +64,20 @@ class Pokemon:
         self.vantagem = vantagem
         self.ataques = ataques
 
+    # Define a vida do Pokémon
     def vida(self, valor):
         if valor < 0:
             self._vida = 0
         else:
             self._vida = valor
 
+    # Reduz a vida do Pokémon
     def perderVida(self, valor):
         self._vida = self._vida - valor
         if self._vida < 0:
             self._vida = 0
 
-    # Método para verificar se o Pokémon está morto
+    # Verifica se o Pokémon está morto
     def morrer(self):
         if self._vida <= 0:
             print(f"{self.nome} morreu!")
@@ -78,10 +85,10 @@ class Pokemon:
             print(f"{self.nome} ainda está vivo com {self._vida} de vida.")
 
     def __str__(self):
-        return (f"Nome: {self.nome}, Tipo: {self.tipo}, Vida: {self.vida}, "
+        return (f"Nome: {self.nome}, Tipo: {self.tipo}, Vida: {self._vida}, "
                 f"Fraqueza: {self.fraqueza}, Vantagem: {self.vantagem}")
 
-
+# Função para obter informações do jogador
 def get_jogador_info(jogador):
     nome_msg = jogador.socket.recv(1024).decode(FORMAT)
     nome = nome_msg.split("|")[1]
@@ -89,45 +96,38 @@ def get_jogador_info(jogador):
     print(f"Jogador conectado: {jogador.nome}")
     jogador.define_pokemons()
 
-
+# Envia uma mensagem simultaneamente para dois jogadores
 def envia_mensagem_simultanea(jogador1, jogador2, mensagem):
     mensagem_bytes = f"{mensagem}\n".encode(FORMAT)
     jogador1.socket.send(mensagem_bytes)
     jogador2.socket.send(mensagem_bytes)
 
-
-def gerenciar_turnos(jogador, adversario, turno_condicao):
+# Gerencia os turnos dos jogadores
+def gerenciar_turnos(jogador, adversario):
     global fim_de_jogo
-
-    # turno = [jogador.nome, adversario.nome]
-    # turno_atual = turno[0]
+    turno = [jogador, adversario]
 
     while not fim_de_jogo:
-        with turno_condicao:
-            while not turno_condicao:
-                jogador.socket.send("status|aguarde\n".encode(FORMAT))
-                turno_condicao.wait_for(turno_condicao)
+        print(turno[0])
+        jogador_atual = turno[0]
+        adversario_atual = turno[1]
 
-            jogador.socket.send("status|sua_vez\n".encode(FORMAT))
+        jogador_atual.socket.send("status|sua_vez\n".encode(FORMAT))
+        adversario_atual.socket.send("status|aguarde\n".encode(FORMAT))
 
-            data = jogador.socket.recv(1024).decode(FORMAT)
+        data = jogador_atual.socket.recv(1024).decode(FORMAT)
 
-            print(data)
-            if data:
-                tipo_mensagem, mensagem = data.split("|", 1)
-                
-                if tipo_mensagem == "ataque":
-                    print(mensagem)
+        print(data)
+        if data:
+            tipo_mensagem, mensagem = data.split("|", 1)
 
+            if tipo_mensagem == "ataque":
+                print(f"{jogador_atual.nome} atacou com {mensagem}")
 
-            # Troca de turno
-            # turno_atual = turno[1] if turno_atual == turno[0] else turno[0]
-            turno_condicao.notify_all()
-    
-    jogador.socket.close()
-    adversario.socket.close()
+        # Alterna os turnos
+        turno = [adversario_atual, jogador_atual]
 
-
+# Função principal que inicia o servidor e gerencia as conexões
 def main():
     print(f"Servidor rodando em {SERVER_IP}:{SERVER_PORT}")
     num_conexoes = 0
@@ -138,14 +138,12 @@ def main():
 
         if num_conexoes == 1:
             jogador1 = Jogador(socket_cliente)
-            jogador1_thread = threading.Thread(target=get_jogador_info(
-                jogador1), args=(jogador1, socket_cliente))
+            jogador1_thread = threading.Thread(target=get_jogador_info, args=(jogador1,))
             jogador1_thread.start()
 
         else:
             jogador2 = Jogador(socket_cliente)
-            jogador2_thread = threading.Thread(target=get_jogador_info(
-                jogador2), args=(jogador2, socket_cliente))
+            jogador2_thread = threading.Thread(target=get_jogador_info, args=(jogador2,))
             jogador2_thread.start()
 
             jogador1_thread.join()
@@ -160,19 +158,15 @@ def main():
                 print("Erro inesperado!")
                 exit()
 
+    try:
+        gerenciar_turnos(jogador1, jogador2)
 
-    turno_condicao = threading.Condition()
+    except KeyboardInterrupt:
+        print("\nInterrupção via teclado recebida. Fechando o servidor...")
+        servidor.close()
+        sys.exit(0)
 
-    # Iniciar as threads de gerenciamento de turnos
-    thread1 = threading.Thread(target=gerenciar_turnos,
-                               args=(jogador1, jogador2, turno_condicao))
-    thread2 = threading.Thread(target=gerenciar_turnos,
-                               args=(jogador2, jogador1, turno_condicao))
-
-    thread1.start()
-    thread2.start()
-
-
+# Ponto de entrada do script
 if __name__ == "__main__":
     print("[INICIANDO] Servidor está iniciando...")
     main()
