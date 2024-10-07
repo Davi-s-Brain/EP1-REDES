@@ -85,13 +85,16 @@ class Pokemon:
         self._vida = self._vida - int(valor)
         if self._vida < 0:
             self._vida = 0
-
+    
     # Verifica se o Pokémon está morto
     def morrer(self):
         if self._vida <= 0:
             print(f"{self.nome} morreu!")
         else:
             print(f"{self.nome} ainda está vivo com {self._vida} de vida.")
+            
+    def fugir(self):
+        self._vida = -1000000000
 
     def __str__(self):
         return (f"Nome: {self.nome}, Tipo: {self.tipo}, Vida: {self._vida}, "
@@ -176,6 +179,11 @@ def gerenciar_turnos(jogador, adversario):
                             "status|derrota\n".encode(FORMAT))
                         fim_de_jogo = True
 
+            elif tipo_mensagem == "fugir":
+                jogador_atual.socket.send("status|fugir\n".encode(FORMAT))
+                adversario_atual.socket.send(f"{jogador_atual.nome} fugiu da batalha!\n".encode(FORMAT))
+                print(f"{jogador_atual.nome} fugiu da batalha!")
+                fim_de_jogo = True
 
         # Alterna os turnos
         turno = [adversario_atual, jogador_atual]

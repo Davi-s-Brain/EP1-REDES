@@ -54,7 +54,8 @@ def escolher_acao(cliente, pokemons_jogador):
         pass
 
     elif acao_escolhida["acao"] == "Fugir":
-        pass
+        print("Você fugiu da batalha!")
+        sys.exit(0)  
 
 
 def atacar(cliente, pokemons_escolhidos):
