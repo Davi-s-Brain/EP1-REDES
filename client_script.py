@@ -54,6 +54,7 @@ def escolher_acao(cliente, pokemons_jogador):
         pass
 
     elif acao_escolhida["acao"] == "Fugir":
+        cliente.send("acao|fugir\n".encode(FORMAT))
         print("Você fugiu da batalha!")
         sys.exit(0)  
 

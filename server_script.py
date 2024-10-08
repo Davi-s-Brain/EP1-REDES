@@ -137,6 +137,15 @@ def gerenciar_turnos(jogador, adversario):
         if data:
             tipo_mensagem, mensagem = data.split("|", 1)
 
+            if tipo_mensagem == "acao" and mensagem.strip() == "fugir":
+                print(f"{jogador_atual.nome} fugiu da batalha!")
+                adversario_atual.socket.send(
+                    f"status|{jogador_atual.nome} fugiu da batalha!\n".encode(FORMAT))
+                jogador_atual.socket.send(
+                    "status|fugiu\n".encode(FORMAT))  # Envia para o jogador que fugiu
+                fim_de_jogo = True
+                break
+            
             if tipo_mensagem == "ataque":
                 pokemon_atacante = mensagem.split("|")[0].split(".")[1]
                 ataque = mensagem.split("|")[1]
