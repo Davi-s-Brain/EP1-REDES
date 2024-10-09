@@ -11,7 +11,6 @@ SERVER = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 
-
 # Definindo os Pokémons
 nomes_pokemons = [pokemon.name for pokemon in lista_pokemons]
 pokemons_jogador = []
@@ -69,17 +68,19 @@ def usar_item(cliente, pokemons_jogador):
     item_escolhido = inquirer.prompt(item, theme=BlueComposure())
 
     if item_escolhido["item"] == "potion":
-        cliente.send(f"item_usado|{pokemon}|potion".encode(FORMAT))
+        cliente.send(f"item|{pokemon}|potion".encode(FORMAT))
         print(f"Você usou uma {item_escolhido['item']} em {pokemon}!")
 
     # Enviar a mensagem de uso de item para o servidor
     cliente.send(f"item|{pokemon}\n".encode(FORMAT))
     print(f"Você usou uma poção em {pokemon}!")
-    
+
+
 def fugir(cliente, nome_jogador):
     cliente.send(f"fugiu|{nome_jogador}".encode(FORMAT))
     print(f"{nome} decidiu fugir da batalha!")
     sys.exit(0)  # Encerra o jogo localmente
+
 
 def atacar(cliente, pokemons_escolhidos):
     pokemon_atual = lista_pokemons[pokemons_escolhidos[0]]
@@ -175,3 +176,4 @@ if __name__ == "__main__":
                 print(f"O pokemon {conteudo_mensagem} morreu!")
 
             buffer = mensagens[-1]
+
