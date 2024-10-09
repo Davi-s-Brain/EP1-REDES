@@ -201,21 +201,7 @@ def gerenciar_turnos(jogador, adversario):
                 adversario_atual.socket.send(
                     f"status|vitoria\n".encode(FORMAT))
                 fim_de_jogo = True
-        
-              # Após qualquer ação (ataque ou uso de item), enviar a vida atual de ambos os Pokémon
-            jogador_atual.socket.send(
-                f"info|Vida do seu Pokémon: {jogador_atual.pokemons[0].get_vida()}\n".encode(FORMAT)
-            )
-            adversario_atual.socket.send(
-                f"info|Vida do Pokémon adversário: {jogador_atual.pokemons[0].get_vida()}\n".encode(FORMAT)
-            )
-
-            jogador_atual.socket.send(
-                f"info|Vida do Pokémon adversário: {adversario_atual.pokemons[0].get_vida()}\n".encode(FORMAT)
-            )
-            adversario_atual.socket.send(
-                f"info|Vida do seu Pokémon: {adversario_atual.pokemons[0].get_vida()}\n".encode(FORMAT)
-            )
+           
         
         # Alterna os turnos
         turno = [adversario_atual, jogador_atual]

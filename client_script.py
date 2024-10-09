@@ -56,9 +56,21 @@ def escolher_acao(cliente, pokemons_jogador):
     elif acao_escolhida["acao"] == "Fugir":
         fugir(cliente, nome)
 
+
 def usar_item(cliente, pokemons_jogador):
-    # Supomos que o item cura o primeiro Pokémon
-    pokemon = pokemons_jogador[0]  # O primeiro Pokémon do jogador
+    # O primeiro Pokémon do jogador será curado
+    pokemon = pokemons_jogador[0]  # O primeiro Pokémon escolhido
+    item = [
+        inquirer.List("item", message="Escolha um item", choices=[
+            "potion"
+        ], default="")
+    ]
+
+    item_escolhido = inquirer.prompt(item, theme=BlueComposure())
+
+    if item_escolhido["item"] == "potion":
+        cliente.send(f"item_usado|{pokemon}|potion".encode(FORMAT))
+        print(f"Você usou uma {item_escolhido['item']} em {pokemon}!")
 
     # Enviar a mensagem de uso de item para o servidor
     cliente.send(f"item|{pokemon}\n".encode(FORMAT))
