@@ -177,17 +177,15 @@ def gerenciar_turnos(jogador, adversario):
                             "status|derrota\n".encode(FORMAT))
                         fim_de_jogo = True
           
-          #verifica se o pokemon fugiu
+          #verifica se o jogador fugiu
             if tipo_mensagem == "fugiu":
-                nome_jogador = mensagem.strip()
-                print(f"O jogador {nome_jogador} fugiu da batalha!")
+                print(f"Um jogador fugiu da batalha!")
                 
                 # Enviar mensagem para ambos os jogadores
                 jogador_atual.socket.send(
                     f"status|derrota\n".encode(FORMAT))
                 adversario_atual.socket.send(
                     f"status|vitoria\n".encode(FORMAT))
-                
                 fim_de_jogo = True
         # Alterna os turnos
         turno = [adversario_atual, jogador_atual]

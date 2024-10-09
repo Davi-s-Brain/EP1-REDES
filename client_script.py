@@ -54,11 +54,11 @@ def escolher_acao(cliente, pokemons_jogador):
         pass
 
     elif acao_escolhida["acao"] == "Fugir":
-        fugir(cliente, pokemons_jogador)
+        fugir(cliente, nome)
 
 def fugir(cliente, nome_jogador):
     cliente.send(f"fugiu|{nome_jogador}".encode(FORMAT))
-    print(f"{nome_jogador} decidiu fugir da batalha!")
+    print(f"{nome} decidiu fugir da batalha!")
     sys.exit(0)  # Encerra o jogo localmente
 
 def atacar(cliente, pokemons_escolhidos):
@@ -146,7 +146,7 @@ if __name__ == "__main__":
                     sys.exit(0)
 
             if tipo_mensagem == "fugiu":
-                print(f"O Pokemon {conteudo_mensagem} fugiu")
+                print(f"O jogador {nome} fugiu")
 
             if tipo_mensagem == "ataque_recebido":
                 print(f"Ataque recebido! {conteudo_mensagem}")
