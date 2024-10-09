@@ -51,11 +51,19 @@ def escolher_acao(cliente, pokemons_jogador):
         atacar(cliente, pokemons_jogador)
 
     elif acao_escolhida["acao"] == "Itens":
-        pass
+        usar_item(cliente, pokemons_jogador)
 
     elif acao_escolhida["acao"] == "Fugir":
         fugir(cliente, nome)
 
+def usar_item(cliente, pokemons_jogador):
+    # Supomos que o item cura o primeiro Pokémon
+    pokemon = pokemons_jogador[0]  # O primeiro Pokémon do jogador
+
+    # Enviar a mensagem de uso de item para o servidor
+    cliente.send(f"item|{pokemon}\n".encode(FORMAT))
+    print(f"Você usou uma poção em {pokemon}!")
+    
 def fugir(cliente, nome_jogador):
     cliente.send(f"fugiu|{nome_jogador}".encode(FORMAT))
     print(f"{nome} decidiu fugir da batalha!")

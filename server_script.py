@@ -176,8 +176,22 @@ def gerenciar_turnos(jogador, adversario):
                         adversario_atual.socket.send(
                             "status|derrota\n".encode(FORMAT))
                         fim_de_jogo = True
+            
+            if tipo_mensagem == "usar_item":
+                # Logica do uso do item
+                pokemon_nome = mensagem.split("\n")[0]
+                pokemon = next(p for p in jogador_atual.pokemons if p.nome == pokemon_nome)
+
+                # Supondo que o item cura 20 pontos de vida
+                pokemon.vida(pokemon.get_vida() + 20)
+                print(f"{jogador_atual.nome} usou uma poção no {pokemon.nome}, que agora tem {pokemon.get_vida()} de vida.")
+                jogador_atual.socket.send(
+                    f"info|Seu {pokemon.nome} foi curado para {pokemon.get_vida()} de vida.\n".encode(FORMAT)
+                )
+
           
-          #verifica se o jogador fugiu
+            
+            #verifica se o jogador fugiu
             if tipo_mensagem == "fugiu":
                 print(f"Um jogador fugiu da batalha!")
                 
@@ -187,6 +201,22 @@ def gerenciar_turnos(jogador, adversario):
                 adversario_atual.socket.send(
                     f"status|vitoria\n".encode(FORMAT))
                 fim_de_jogo = True
+        
+              # Após qualquer ação (ataque ou uso de item), enviar a vida atual de ambos os Pokémon
+            jogador_atual.socket.send(
+                f"info|Vida do seu Pokémon: {jogador_atual.pokemons[0].get_vida()}\n".encode(FORMAT)
+            )
+            adversario_atual.socket.send(
+                f"info|Vida do Pokémon adversário: {jogador_atual.pokemons[0].get_vida()}\n".encode(FORMAT)
+            )
+
+            jogador_atual.socket.send(
+                f"info|Vida do Pokémon adversário: {adversario_atual.pokemons[0].get_vida()}\n".encode(FORMAT)
+            )
+            adversario_atual.socket.send(
+                f"info|Vida do seu Pokémon: {adversario_atual.pokemons[0].get_vida()}\n".encode(FORMAT)
+            )
+        
         # Alterna os turnos
         turno = [adversario_atual, jogador_atual]
     
