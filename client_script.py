@@ -59,7 +59,7 @@ def escolher_acao(cliente, pokemons_jogador):
 def usar_item(cliente, pokemons_jogador):
     # Supomos que o item cura o primeiro Pokémon
     pokemon = pokemons_jogador[0]  # O primeiro Pokémon do jogador
-
+    
     # Enviar a mensagem de uso de item para o servidor
     cliente.send(f"item|{pokemon}\n".encode(FORMAT))
     print(f"Você usou uma poção em {pokemon}!")
