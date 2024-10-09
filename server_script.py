@@ -177,7 +177,7 @@ def gerenciar_turnos(jogador, adversario):
                             "status|derrota\n".encode(FORMAT))
                         fim_de_jogo = True
             
-            if tipo_mensagem == "usar_item":
+            if tipo_mensagem == "item":
                 # Logica do uso do item
                 pokemon_nome = mensagem.split("\n")[0]
                 pokemon = next(p for p in jogador_atual.pokemons if p.nome == pokemon_nome)
