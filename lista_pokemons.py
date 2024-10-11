@@ -43,7 +43,7 @@ lista_pokemons = Enum("Pokemons", {
     },
     
     "Gastly": {
-        "tipo": "fantasma",
+        "tipo": "Fantasma",
         "vida": 100,
         "fraqueza": "Veneno",
         "vantagem": "Planta",
@@ -55,7 +55,7 @@ lista_pokemons = Enum("Pokemons", {
     },
     
     "Magikarp": {
-        "tipo": "água",
+        "tipo": "Água",
         "vida": 10000000,
         "fraqueza": "Elétrico",
         "vantagem": "Planta",
