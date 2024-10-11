@@ -41,4 +41,28 @@ lista_pokemons = Enum("Pokemons", {
             "Raio solar": 15
         }
     }
+    
+    "Gastly": {
+        "tipo": "fantasma",
+        "vida": 100,
+        "fraqueza": "Veneno",
+        "vantagem": "Planta",
+        "ataques": {
+            "Lick": 10,
+            "Curse": 100
+        }
+        
+    }
+    
+    "Magikarp": {
+        "tipo": "água",
+        "vida": 10000000,
+        "fraqueza": "Elétrico",
+        "vantagem": "Planta",
+        "ataques": {
+            "Splash": 0
+        }
+        
+    }
+    
 })
