@@ -17,6 +17,7 @@ servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 servidor.bind(ADDR)
 servidor.listen(2)
 
+
 # Classe que representa um jogador
 
 
@@ -56,6 +57,7 @@ class Jogador:
             ataques=pokemon_info["ataques"],
         )
         self.pokemons.append(pokemon)
+
 
 # Classe que representa um Pokémon
 
@@ -97,6 +99,7 @@ class Pokemon:
         return (f"Nome: {self.nome}, Tipo: {self.tipo}, Vida: {self._vida}, "
                 f"Fraqueza: {self.fraqueza}, Vantagem: {self.vantagem}")
 
+
 # Função para obter informações do jogador
 
 
@@ -107,6 +110,7 @@ def get_jogador_info(jogador):
     print(f"Jogador conectado: {jogador.nome}")
     jogador.define_pokemons()
 
+
 # Envia uma mensagem simultaneamente para dois jogadores
 
 
@@ -114,6 +118,7 @@ def envia_mensagem_simultanea(jogador1, jogador2, mensagem):
     mensagem_bytes = f"{mensagem}\n".encode(FORMAT)
     jogador1.socket.send(mensagem_bytes)
     jogador2.socket.send(mensagem_bytes)
+
 
 # Gerencia os turnos dos jogadores
 
@@ -176,12 +181,45 @@ def gerenciar_turnos(jogador, adversario):
                             "status|derrota\n".encode(FORMAT))
                         fim_de_jogo = True
 
+            if tipo_mensagem == "item":
+                pokemon_nome = mensagem.split("|")[0].strip()  # Remove espaços em branco e divide corretamente
+                pokemon = next((p for p in jogador_atual.pokemons if p.nome == pokemon_nome), None)
+
+                if pokemon is None:
+                    print(f"Pokémon {pokemon_nome} não encontrado no time de {jogador_atual.nome}.")
+                    jogador_atual.socket.send(f"erro|Pokémon {pokemon_nome} não encontrado.\n".encode(FORMAT))
+                else:
+                    # Supondo que o item cura 20 pontos de vida, sem exceder o máximo de vida
+                    vida_atual = pokemon.get_vida()
+                    vida_maxima = lista_pokemons.__getitem__(pokemon_nome).value["vida"]  # Pega o valor máximo de vida
+
+                    nova_vida = min(vida_atual + 20, vida_maxima)  # Não deixa a vida ultrapassar o máximo
+                    pokemon.vida(nova_vida)  # Define a nova vida
+
+                    print(
+                        f"{jogador_atual.nome} usou uma poção no {pokemon.nome}, que agora tem {pokemon.get_vida()} de vida.")
+
+                    jogador_atual.socket.send(
+                        f"info|Seu {pokemon.nome} foi curado para {pokemon.get_vida()} de vida.\n".encode(FORMAT)
+                    )
+
+            # verifica se o jogador fugiu
+            if tipo_mensagem == "fugiu":
+                print(f"Um jogador fugiu da batalha!")
+
+                # Enviar mensagem para ambos os jogadores
+                jogador_atual.socket.send(
+                    f"status|derrota\n".encode(FORMAT))
+                adversario_atual.socket.send(
+                    f"status|vitoria\n".encode(FORMAT))
+                fim_de_jogo = True
 
         # Alterna os turnos
         turno = [adversario_atual, jogador_atual]
-    
+
     jogador.socket.close()
     adversario.socket.close()
+
 
 # Função principal que inicia o servidor e gerencia as conexões
 

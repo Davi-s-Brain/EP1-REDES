@@ -11,7 +11,6 @@ SERVER = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 
-
 # Definindo os Pokémons
 nomes_pokemons = [pokemon.name for pokemon in lista_pokemons]
 pokemons_jogador = []
@@ -51,10 +50,36 @@ def escolher_acao(cliente, pokemons_jogador):
         atacar(cliente, pokemons_jogador)
 
     elif acao_escolhida["acao"] == "Itens":
-        pass
+        usar_item(cliente, pokemons_jogador)
 
     elif acao_escolhida["acao"] == "Fugir":
-        pass
+        fugir(cliente, nome)
+
+
+def usar_item(cliente, pokemons_jogador):
+    # O primeiro Pokémon do jogador será curado
+    pokemon = pokemons_jogador[0]  # O primeiro Pokémon escolhido
+    item = [
+        inquirer.List("item", message="Escolha um item", choices=[
+            "potion"
+        ], default="")
+    ]
+
+    item_escolhido = inquirer.prompt(item, theme=BlueComposure())
+
+    if item_escolhido["item"] == "potion":
+        cliente.send(f"item|{pokemon}|potion".encode(FORMAT))
+        print(f"Você usou uma {item_escolhido['item']} em {pokemon}!")
+
+    # Enviar a mensagem de uso de item para o servidor
+    cliente.send(f"item|{pokemon}\n".encode(FORMAT))
+    print(f"Você usou uma poção em {pokemon}!")
+
+
+def fugir(cliente, nome_jogador):
+    cliente.send(f"fugiu|{nome_jogador}".encode(FORMAT))
+    print(f"{nome} decidiu fugir da batalha!")
+    sys.exit(0)  # Encerra o jogo localmente
 
 
 def atacar(cliente, pokemons_escolhidos):
@@ -141,6 +166,9 @@ if __name__ == "__main__":
                     print("VOCÊ PERDEU! BOA SORTE NA PRÓXIMA")
                     sys.exit(0)
 
+            if tipo_mensagem == "fugiu":
+                print(f"O jogador {nome} fugiu")
+
             if tipo_mensagem == "ataque_recebido":
                 print(f"Ataque recebido! {conteudo_mensagem}")
 
@@ -148,3 +176,4 @@ if __name__ == "__main__":
                 print(f"O pokemon {conteudo_mensagem} morreu!")
 
             buffer = mensagens[-1]
+
