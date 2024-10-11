@@ -40,7 +40,7 @@ lista_pokemons = Enum("Pokemons", {
             "Folha navalha": 10,
             "Raio solar": 15
         }
-    }
+    },
     
     "Gastly": {
         "tipo": "fantasma",
@@ -52,7 +52,7 @@ lista_pokemons = Enum("Pokemons", {
             "Curse": 100
         }
         
-    }
+    },
     
     "Magikarp": {
         "tipo": "água",
