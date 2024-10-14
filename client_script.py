@@ -7,7 +7,7 @@ from lista_pokemons import lista_pokemons
 from inquirer.themes import BlueComposure
 
 PORT = 4242
-SERVER = socket.gethostbyname(socket.gethostname())
+SERVER = str(input("Insira o IP do servidor: "))
 ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 
@@ -19,7 +19,7 @@ pokemons_jogador = []
 def escolher_pokemons(cliente):
     pokemons_prompt = [
         inquirer.Checkbox(
-            "pokemons", message="Escolha seus pokémons (max 2)", choices=nomes_pokemons, default=[])
+            "pokemons", message="Escolha seus pokémons (max 1) Aperte espaço para selecionar e Enter para confirmar", choices=nomes_pokemons, default=[])
     ]
 
     pokemons_escolhidos = inquirer.prompt(
@@ -73,7 +73,6 @@ def usar_item(cliente, pokemons_jogador):
 
     # Enviar a mensagem de uso de item para o servidor
     cliente.send(f"item|{pokemon}\n".encode(FORMAT))
-    print(f"Você usou uma poção em {pokemon}!")
 
 
 def fugir(cliente, nome_jogador):
@@ -138,10 +137,8 @@ if __name__ == "__main__":
                 tipo_mensagem = tipo_mensagem.strip()
                 conteudo_mensagem = conteudo_mensagem.strip()
             else:
-                # buffer = ""
                 continue
 
-            # print(f"{tipo_mensagem} - {conteudo_mensagem}")
 
             if tipo_mensagem == "status":
                 if conteudo_mensagem == "escolha_pokemons":
