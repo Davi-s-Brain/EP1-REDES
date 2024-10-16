@@ -200,9 +200,14 @@ def gerenciar_turnos(jogador, adversario):
                     print(
                         f"{jogador_atual.nome} usou uma poção no {pokemon.nome}, que agora tem {nova_vida} de vida.")
 
+                    time.sleep(0.1)
                     jogador_atual.socket.send(
                         f"info|{pokemon.nome}|{nova_vida}".encode(FORMAT)
                     )
+                    time.sleep(0.1)
+
+                # Alterna os turnos após usar um item
+                turno = [adversario_atual, jogador_atual]
 
             # verifica se o jogador fugiu
             if tipo_mensagem == "fugiu":

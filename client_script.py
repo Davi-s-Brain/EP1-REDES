@@ -7,7 +7,7 @@ from lista_pokemons import lista_pokemons
 from inquirer.themes import BlueComposure
 
 PORT = 4242
-SERVER = socket.gethostbyname(socket.gethostname())
+SERVER = str(input("Insira o IP do servidor: "))
 ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 
@@ -122,59 +122,52 @@ if __name__ == "__main__":
     cliente.send(f"nome|{nome}\n".encode(FORMAT))
     print("Conectado ao servidor!")
 
-    buffer = ""
+    mensagem = ""
 
     while True:
-        buffer += cliente.recv(1024).decode(FORMAT)
-        mensagens = buffer.split("\n")
+        mensagem = cliente.recv(1024).decode(FORMAT)
 
-        for mensagem in mensagens[:-1]:
-            if not mensagem:
-                continue
-
-            if buffer:
-                tipo_mensagem, conteudo_mensagem = buffer.split("|", 1)
-                tipo_mensagem = tipo_mensagem.strip()
-                conteudo_mensagem = conteudo_mensagem.strip()
-            else:
-                continue
+        tipo_mensagem, conteudo_mensagem = mensagem.split("|", 1)
+        tipo_mensagem = tipo_mensagem.strip()
+        conteudo_mensagem = conteudo_mensagem.strip()
 
 
-            if tipo_mensagem == "status":
-                if conteudo_mensagem == "escolha_pokemons":
-                    pokemons_jogador = escolher_pokemons(cliente)
+        if tipo_mensagem == "status":
+            if conteudo_mensagem == "escolha_pokemons":
+                pokemons_jogador = escolher_pokemons(cliente)
 
-                elif conteudo_mensagem == "jogo_pronto":
-                    cliente.send("status|pronto\n".encode(FORMAT))
-                    typer.echo("Aguardando o outro jogador para começær...")
+            elif conteudo_mensagem == "jogo_pronto":
+                cliente.send("status|pronto\n".encode(FORMAT))
+                typer.echo("Aguardando o outro jogador para começær...")
 
-                elif conteudo_mensagem == "sua_vez":
-                    print("É a sua vez de jogar!")
-                    acao = escolher_acao(cliente, pokemons_jogador)
+            elif conteudo_mensagem == "sua_vez":
+                print("É a sua vez de jogar!")
+                acao = escolher_acao(cliente, pokemons_jogador)
 
-                elif conteudo_mensagem == "aguarde":
-                    print("Aguarde o outro jogador realizar sua ação...")
+            elif conteudo_mensagem == "aguarde":
+                print("Aguarde o outro jogador realizar sua ação...")
 
-                elif conteudo_mensagem == "vitoria":
-                    print("VOCÊ VENCEU! PARABÉNS!")
-                    sys.exit(0)
+            elif conteudo_mensagem == "vitoria":
+                print("VOCÊ VENCEU! PARABÉNS!")
+                sys.exit(0)
 
-                elif conteudo_mensagem == "derrota":
-                    print("VOCÊ PERDEU! BOA SORTE NA PRÓXIMA")
-                    sys.exit(0)
+            elif conteudo_mensagem == "derrota":
+                print("VOCÊ PERDEU! BOA SORTE NA PRÓXIMA")
+                sys.exit(0)
 
-            if tipo_mensagem == "fugiu":
-                print(f"O jogador {nome} fugiu")
+        if tipo_mensagem == "fugiu":
+            print(f"O jogador {nome} fugiu")
 
-            if tipo_mensagem == "ataque_recebido":
-                print(f"Ataque recebido! {conteudo_mensagem}")
+        if tipo_mensagem == "ataque_recebido":
+            print(f"Ataque recebido! {conteudo_mensagem}")
 
-            if tipo_mensagem == "morte":
-                print(f"O pokemon {conteudo_mensagem} morreu!")
+        if tipo_mensagem == "morte":
+            print(f"O pokemon {conteudo_mensagem} morreu!")
 
-            if tipo_mensagem == "erro":
-                print(f"Erro: {conteudo_mensagem}")
+        if tipo_mensagem == "erro":
+            print(f"Erro: {conteudo_mensagem}")
 
-
-            buffer = mensagens[-1]
+        if tipo_mensagem == "info":
+            pokemon_nome, pokemon_vida = conteudo_mensagem.split("|")
+            print(f"O Pokémon {pokemon_nome} foi curado para {pokemon_vida} pontos de vida!")
 
