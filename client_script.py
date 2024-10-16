@@ -7,7 +7,7 @@ from lista_pokemons import lista_pokemons
 from inquirer.themes import BlueComposure
 
 PORT = 4242
-SERVER = str(input("Insira o IP do servidor: "))
+SERVER = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 
