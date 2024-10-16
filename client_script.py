@@ -7,7 +7,7 @@ from lista_pokemons import lista_pokemons
 from inquirer.themes import BlueComposure
 
 PORT = 4242
-SERVER = str(input("Insira o IP do servidor: "))
+SERVER = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER, PORT)
 FORMAT = "utf-8"
 
@@ -171,6 +171,10 @@ if __name__ == "__main__":
 
             if tipo_mensagem == "morte":
                 print(f"O pokemon {conteudo_mensagem} morreu!")
+
+            if tipo_mensagem == "erro":
+                print(f"Erro: {conteudo_mensagem}")
+
 
             buffer = mensagens[-1]
 

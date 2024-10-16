@@ -143,7 +143,6 @@ def gerenciar_turnos(jogador, adversario):
                 pokemon_atacante = mensagem.split("|")[0].split(".")[1]
                 ataque = mensagem.split("|")[1]
                 dano = int(mensagem.split("|")[2])
-                mensagem_ataque = f"{jogador_atual.nome} atacou com {pokemon_atacante}, {ataque}"
 
                 # Encontra o Pokémon defensor
                 # Supondo que o primeiro Pokémon é o que está batalhando
@@ -158,6 +157,8 @@ def gerenciar_turnos(jogador, adversario):
                 # Subtrai os pontos de vida do Pokémon defensor
                 pokemon_defensor.perderVida(dano)
                 print(f"{pokemon_defensor.nome} agora tem {pokemon_defensor._vida} de vida.")
+                
+                mensagem_ataque = f"{jogador_atual.nome} atacou com {pokemon_atacante}, {ataque}. Causou {dano} de dano.\nSeu pokemon tem {adversario_atual.pokemons[0].get_vida()} de vida.\n{jogador_atual.nome} tem {jogador_atual.pokemons[0].get_vida()} de vida."
 
                 time.sleep(0.1)
                 adversario_atual.socket.send(
@@ -197,10 +198,10 @@ def gerenciar_turnos(jogador, adversario):
                     pokemon.vida(nova_vida)  # Define a nova vida
 
                     print(
-                        f"{jogador_atual.nome} usou uma poção no {pokemon.nome}, que agora tem {pokemon.get_vida()} de vida.")
+                        f"{jogador_atual.nome} usou uma poção no {pokemon.nome}, que agora tem {nova_vida} de vida.")
 
                     jogador_atual.socket.send(
-                        f"info|Seu {pokemon.nome} foi curado para {pokemon.get_vida()} de vida.\n".encode(FORMAT)
+                        f"info|{pokemon.nome}|{nova_vida}".encode(FORMAT)
                     )
 
             # verifica se o jogador fugiu
