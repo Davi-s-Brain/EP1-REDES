@@ -155,7 +155,7 @@ def gerenciar_turnos(jogador, adversario):
                     dano //= 2
 
                 # Subtrai os pontos de vida do Pokémon defensor
-                pokemon_defensor.perderVida(dano)
+                pokemon_defensor.perder_vida(dano)
                 print(f"{pokemon_defensor.nome} agora tem {pokemon_defensor._vida} de vida.")
                 
                 mensagem_ataque = f"{jogador_atual.nome} atacou com {pokemon_atacante}, {ataque}. Causou {dano} de dano.\nSeu pokemon tem {adversario_atual.pokemons[0].get_vida()} de vida.\n{jogador_atual.nome} tem {jogador_atual.pokemons[0].get_vida()} de vida."
