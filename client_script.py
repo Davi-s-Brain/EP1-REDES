@@ -22,6 +22,7 @@ def escolher_pokemons(cliente):
             "pokemons", message="Escolha seus pokémons (max 1) Aperte espaço para selecionar e Enter para confirmar", choices=nomes_pokemons, default=[])
     ]
 
+    # Exibir a lista de pokémons disponíveis para escolha
     pokemons_escolhidos = inquirer.prompt(
         pokemons_prompt, theme=BlueComposure())
 
@@ -44,6 +45,7 @@ def escolher_acao(cliente, pokemons_jogador):
         ], default="Atacar")
     ]
 
+    # Exibe as ações disponíveis para o jogador
     acao_escolhida = inquirer.prompt(acoes, theme=BlueComposure())
 
     if acao_escolhida["acao"] == "Atacar":
@@ -82,6 +84,7 @@ def fugir(cliente, nome_jogador):
 
 
 def atacar(cliente, pokemons_escolhidos):
+    # Seleciona o primeiro Pokémon escolhido pelo jogador
     pokemon_atual = lista_pokemons[pokemons_escolhidos[0]]
     ataques_disponiveis = pokemon_atual.value["ataques"]
     lista_ataques = []
@@ -90,6 +93,7 @@ def atacar(cliente, pokemons_escolhidos):
     for ataque, dano in ataques_disponiveis.items():
         lista_ataques.append(f"{ataque} (Dano: {dano})")
 
+    # Prompt para o jogador escolher um ataque
     ataques = [
         inquirer.List("ataque", message="Escolha um ataque", choices=[
             lista_ataques[0], lista_ataques[1]
@@ -98,12 +102,14 @@ def atacar(cliente, pokemons_escolhidos):
 
     ataque_escolhido = inquirer.prompt(ataques, theme=BlueComposure())
 
+    # Extrai o dano do ataque escolhido usando regex
     match = re.search(r'\(Dano: (\d+)\)', ataque_escolhido["ataque"])
     if match:
         dano_ataque = int(match.group(1))
 
     nome_ataque = ataque_escolhido["ataque"].split(" (")[0]
 
+    # Envia a informação do ataque escolhido para o servidor
     cliente.send(
         f"ataque|{pokemon_atual}|{nome_ataque}|{dano_ataque}".encode(FORMAT))
 

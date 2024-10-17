@@ -83,7 +83,7 @@ class Pokemon:
         return self._vida
 
     # Reduz a vida do Pokémon
-    def perderVida(self, valor):
+    def perder_vida(self, valor):
         self._vida = self._vida - int(valor)
         if self._vida < 0:
             self._vida = 0
